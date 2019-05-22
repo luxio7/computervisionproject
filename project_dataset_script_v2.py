@@ -258,9 +258,6 @@ score = modelPredict.evaluate(x_val, y_val, verbose=0)
 print('Test score:', score[0]) 
 print('Test accuracy:', score[1])
 
-
-
-
 sys.exit()
 
 
