@@ -3,11 +3,12 @@ import numpy as np
 import os
 from skimage import io
 from skimage.transform import resize
-from keras.layers import Input, Dense, Conv2D, MaxPooling2D, UpSampling2D
+from keras.layers import Input, Dense, Conv2D, MaxPooling2D, UpSampling2D, Flatten, Activation
 from keras.models import Model
 from keras.utils import to_categorical
 from keras import backend as K
 import numpy as np
+from keras.models import Sequential 
 import pickle
 from matplotlib import pyplot as plt
 import sys
@@ -104,33 +105,36 @@ else:
 # https://blog.keras.io/building-autoencoders-in-keras.html voorbeeldcode
 # https://stackoverflow.com/questions/48243360/how-to-determine-the-filter-parameter-in-the-keras-conv2d-function filtersize
 # https://stackoverflow.com/questions/51877834/fine-tuning-of-keras-autoencoders-of-cat-images
-
+# https://github.com/shibuiwilliam/Keras_Autoencoder/blob/master/Cifar_Conv_AutoEncoder.ipynb
 
 input_img = Input(shape=(image_size, image_size, 3))  # adapt this if using `channels_first` image data format, origineel (28,28,1) dit wilt zeggen 28 breed 28 hoog en 1 diep (zwart wit dus)
 
-x = Conv2D(32, (3, 3), activation='relu', padding='same')(input_img) #eerste argument is the dimensionality of the output space (i.e. the number of output filters in the convolution).
+x = Conv2D(16, (3, 3), activation='relu', padding='same')(input_img) #eerste argument is the dimensionality of the output space (i.e. the number of output filters in the convolution).
 x = MaxPooling2D((2, 2), padding='same')(x)
-x = Conv2D(16, (3, 3), activation='relu', padding='same')(x)
+x = Conv2D(32, (3, 3), activation='relu', padding='same')(x)
 x = MaxPooling2D((2, 2), padding='same')(x)
-x = Conv2D(16, (3, 3), activation='relu', padding='same')(x)
+x = Conv2D(32, (3, 3), activation='relu', padding='same')(x)
+x = MaxPooling2D((2, 2), padding='same')(x)
+x = Conv2D(64, (3, 3), activation='relu', padding='same')(x)
 encoded = MaxPooling2D((2, 2), padding='same')(x)
 
 # at this point the representation is (27, 27, 8) i.e. 128-dimensional
 
-x = Conv2D(16, (3, 3), activation='relu', padding='same')(encoded)
+x = Conv2D(64, (3, 3), activation='relu', padding='same')(encoded)
 x = UpSampling2D((2, 2))(x) #tegenovergestelde van MaxPooling2D
-x = Conv2D(16, (3, 3), activation='relu', padding='same')(x)
+x = Conv2D(32, (3, 3), activation='relu', padding='same')(x)
 x = UpSampling2D((2, 2))(x)
 x = Conv2D(32, (3, 3), activation='relu', padding='same')(x)
 x = UpSampling2D((2, 2))(x)
+x = Conv2D(16, (3, 3), activation='relu', padding='same')(x)
+x = UpSampling2D((2, 2))(x)
 decoded = Conv2D(3, (3, 3), activation='sigmoid', padding='same')(x)
-
 autoencoder = Model(input_img, decoded)
-autoencoder.compile(optimizer='adadelta', loss='binary_crossentropy') #binary_crossentropy
-autoencoder.summary()
+autoencoder.compile(optimizer='adadelta', loss='MSE') #binary_crossentropy kan ook 
+#autoencoder.summary()
 
-#netwerk trainen
-if True:
+#netwerk van 0 trainen
+if False:
     autoencoder.fit(x_train, x_train,
                     epochs=50,
                     batch_size=128,
@@ -141,7 +145,19 @@ if True:
     autoencoder.save_weights("weights"+tijdstring+".h5")
     #sys.exit()
 else:
-    autoencoder.load_weights("weights.h5")
+    #netwerk nog verder trainen
+    if False:
+        autoencoder.load_weights("weights.h5")
+        autoencoder.fit(x_train, x_train,
+                    epochs=300,
+                    batch_size=128,
+                    shuffle=True,
+                    validation_data=(x_val, x_val))
+        tijd = datetime.datetime.now()
+        tijdstring = tijd.strftime("%H:%M:%S").replace(":", "_")
+        autoencoder.save_weights("weights"+tijdstring+".h5")
+    else:
+        autoencoder.load_weights("weights.h5")
 
 
 
@@ -153,6 +169,7 @@ testPicture = np.asarray([x_val[0].tolist()])
 uitkomst = autoencoder.predict(testPicture)[0]
 io.imshow(uitkomst)
 plt.show()
+
 
 # =============================================================================
 # CLASSIFICATIE (deel 3)
@@ -169,51 +186,82 @@ plt.show()
 # ik denk dit -> model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy'])
 # =============================================================================
 
-yCatTrain = to_categorical(y_train)
-yCatVal = to_categorical(y_val)
+#-------------------------
+#EERSTE MODEL -> 50% max
+#-------------------------
+if False:
+    autoencoder.load_weights("weights.h5")
+    #encoderlayers = autoencoder.layers[:8] # geen idee of dit werkt
+    
+    '''
+    # Freeze the layers
+    for i in range(1,8,2):
+        encoderlayers[i].trainable = False
+    '''
+    
+    input_dim = 4096 #8*8*64
+    output_dim = nb_classes = 5 
+    
+    number_of_layers_to_freeze = 8
+    vgg_model = Model(input_img, encoded)
+    for i in range(number_of_layers_to_freeze):
+        vgg_model.layers[i].trainable = False
+    vgg_output = vgg_model.outputs[0]
+    
+    flat = Flatten()(vgg_output)
+    output = Dense(output_dim, input_dim=input_dim, activation='softmax')(flat)
+    print("de shape van de dense is: ")
+    print(output.get_shape())
+    
+    batch_size = 128 
+    nb_epoch = 300
+    modelPredict = Model(inputs=vgg_model.inputs, outputs=output)
+    print("summary of modelPredict")
+    modelPredict.summary()
+    print("einde summary of modelPredict")
+    modelPredict.compile(optimizer='sgd', loss='categorical_crossentropy', metrics=['accuracy']) 
+    history = modelPredict.fit(x_train, y_train, batch_size=batch_size, nb_epoch=nb_epoch,verbose=1, validation_data=(x_val, y_val)) 
+    score = modelPredict.evaluate(x_val, y_val, verbose=0) 
+    print('Test score:', score[0]) 
+    print('Test accuracy:', score[1])
 
-
-
-#eerste model
+#-------------------------
+#TWEEDE MODEL
+#-------------------------
 autoencoder.load_weights("weights.h5")
-encoderlayers = autoencoder.layers[:5] # geen idee of dit werkt
+#encoderlayers = autoencoder.layers[:8] # geen idee of dit werkt
 
-# Freeze the layers
-for layer in encoderlayers.layers:
-    layer.trainable = False
+input_dim = 4096 #8*8*64
+output_dim = nb_classes = 5 
 
-model1 = Model()
-model1.add(encoderlayers)
-model1.add(Dense(AANVULLEN, input_dim=2, activation='relu', kernel_initializer='he_uniform'))
-model1.add(Dense(3, activation='softmax'))
-# compile model
-model1.compile(loss='categorical_crossentropy', metrics=['accuracy'])
-# fit model
-history = model1.fit(x_train, yCatTrain, validation_data=(x_val, yCatVal), epochs=100, verbose=0)
+input_img = Input(shape=(image_size, image_size, 3))  # adapt this if using `channels_first` image data format, origineel (28,28,1) dit wilt zeggen 28 breed 28 hoog en 1 diep (zwart wit dus)
+x = Conv2D(16, (3, 3), activation='relu', padding='same', kernel_initializer ='random_normal')(input_img) #eerste argument is the dimensionality of the output space (i.e. the number of output filters in the convolution).
+x = MaxPooling2D((2, 2), padding='same')(x)
+x = Conv2D(32, (3, 3), activation='relu', padding='same', kernel_initializer ='random_normal')(x)
+x = MaxPooling2D((2, 2), padding='same')(x)
+x = Conv2D(32, (3, 3), activation='relu', padding='same', kernel_initializer ='random_normal')(x)
+x = MaxPooling2D((2, 2), padding='same')(x)
+x = Conv2D(64, (3, 3), activation='relu', padding='same', kernel_initializer ='random_normal')(x)
+encoded2 = MaxPooling2D((2, 2), padding='same')(x)
+flat = Flatten()(encoded2)
+output = Dense(output_dim, input_dim=input_dim, activation='softmax')(flat)
 
-
-
-#tweede model
-# https://keras.io/initializers/
-encoderlayers = autoencoder.layers[:5] # geen idee of dit werkt -> moet nog de opbouw van de encoder worden zonder dit want de tag kernel_initializer='random_uniform' moet overal bij
-
-model1 = Model()
-model1.add(encoderlayers)
-model1.add(Dense(AANVULLEN, input_dim=2, activation='relu', kernel_initializer='he_uniform'))
-model1.add(Dense(3, activation='softmax'))
-# compile model
-model1.compile(loss='categorical_crossentropy', metrics=['accuracy'])
-# fit model
-history = model1.fit(x_train, yCatTrain, validation_data=(x_val, yCatVal), epochs=100, verbose=0)
-
+batch_size = 128 
+nb_epoch = 300
+modelPredict2 = Model(input_img, outputs=output)
+print("summary of modelPredict")
+modelPredict.summary()
+print("einde summary of modelPredict")
+modelPredict.compile(optimizer='sgd', loss='categorical_crossentropy', metrics=['accuracy']) 
+history = modelPredict.fit(x_train, y_train, batch_size=batch_size, nb_epoch=nb_epoch,verbose=1, validation_data=(x_val, y_val)) 
+score = modelPredict.evaluate(x_val, y_val, verbose=0) 
+print('Test score:', score[0]) 
+print('Test accuracy:', score[1])
 
 
 
 
-
-
-
-
+sys.exit()
 
 
 
