@@ -10,8 +10,7 @@ from keras.callbacks import ModelCheckpoint, LearningRateScheduler
 from keras import backend as keras
 
 
-def unet(pretrained_weights = None,input_size = (256,256,3)):
-    print("starting creating model")
+def unet(pretrained_weights = None,input_size = (256,256,1)):
     inputs = Input(input_size)
     conv1 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(inputs)
     conv1 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv1)
@@ -54,11 +53,10 @@ def unet(pretrained_weights = None,input_size = (256,256,3)):
     conv10 = Conv2D(1, 1, activation = 'sigmoid')(conv9)
 
     model = Model(input = inputs, output = conv10)
-    print("input shape: %s , output shape = %s" %(inputs.shape, conv10.shape))
 
     model.compile(optimizer = Adam(lr = 1e-4), loss = 'binary_crossentropy', metrics = ['accuracy'])
     
-    model.summary()
+    #model.summary()
 
     if(pretrained_weights):
     	model.load_weights(pretrained_weights)

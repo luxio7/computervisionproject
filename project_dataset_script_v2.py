@@ -14,12 +14,16 @@ from matplotlib import pyplot as plt
 import sys
 import datetime
 
+#%%
 # parameters that you should set before running this script
 filter = ['aeroplane', 'car', 'chair', 'dog', 'bird']       # select class, this default should yield 1489 training and 1470 validation images
-voc_root_folder = "C:/Users/rikp/Desktop/computervisiondatabase/VOCtrainval_11-May-2009/VOCdevkit/"  # please replace with the location on your laptop where you unpacked the tarball
+#voc_root_folder = "C:/Users/rikp/Desktop/computervisiondatabase/VOCtrainval_11-May-2009/VOCdevkit/"  # please replace with the location on your laptop where you unpacked the tarball
+voc_root_folder = "C:/Users/emile/Documents/KUL/ComputerVision/computervisionproject/data/VOCdevkit/"
 image_size = 128    # image size that you will use for your network (input images will be resampled to this size), lower if you have troubles on your laptop (hint: use io.imshow to inspect the quality of the resampled images before feeding it into your network!)
                     # neem iets dat deelbaar is door 8
-if False:
+#%%
+if True:
+    print("step 1")
     # step1 - build list of filtered filenames
     annotation_folder = os.path.join(voc_root_folder, "VOC2009/Annotations/")
     annotation_files = os.listdir(annotation_folder)
@@ -30,6 +34,7 @@ if False:
             filtered_filenames.append(a_f[:-4])
     
     # step2 - build (x,y) for TRAIN/VAL (classification)
+    print("step 2")
     classes_folder = os.path.join(voc_root_folder, "VOC2009/ImageSets/Main/")
     classes_files = os.listdir(classes_folder)
     train_files = [os.path.join(classes_folder, c_f) for filt in filter for c_f in classes_files if filt in c_f and '_train.txt' in c_f]
@@ -95,6 +100,8 @@ else:
         x_val = pickle.load(f)
     with open('y_val.txt', 'rb') as f:
         y_val = pickle.load(f)
+        
+#%%
 
 # from here, you can start building your model
 # you will only need x_train and x_val for the autoencoder
@@ -170,6 +177,7 @@ uitkomst = autoencoder.predict(testPicture)[0]
 io.imshow(uitkomst)
 plt.show()
 
+#%%
 
 # =============================================================================
 # CLASSIFICATIE (deel 3)
@@ -248,7 +256,7 @@ output = Dense(output_dim, input_dim=input_dim, activation='softmax')(flat)
 
 batch_size = 128 
 nb_epoch = 300
-modelPredict2 = Model(input_img, outputs=output)
+modelPredict = Model(input_img, outputs=output)
 print("summary of modelPredict")
 modelPredict.summary()
 print("einde summary of modelPredict")

@@ -1,1 +1,9 @@
 data
+x_train.txt
+y_train.txt
+x_val.txt
+y_val.txt
+seg_x_train.txt
+seg_y_train.txt
+seg_x_val.txt
+seg_y_val.txt
