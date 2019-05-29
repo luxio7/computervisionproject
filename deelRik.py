@@ -11,12 +11,14 @@ from keras.models import Sequential
 import pickle
 from matplotlib import pyplot as plt
 import sys
+import random
 import datetime
+from lxml import etree
 
 # parameters that you should set before running this script
 filter = ['aeroplane', 'car', 'chair', 'dog', 'bird']       # select class, this default should yield 1489 training and 1470 validation images
 voc_root_folder = "D:/computervisiondatabase/VOCtrainval_11-May-2009/VOCdevkit/"  # please replace with the location on your laptop where you unpacked the tarball
-image_size = 96    # image size that you will use for your network (input images will be resampled to this size), lower if you have troubles on your laptop (hint: use io.imshow to inspect the quality of the resampled images before feeding it into your network!)
+image_size = 144    # image size that you will use for your network (input images will be resampled to this size), lower if you have troubles on your laptop (hint: use io.imshow to inspect the quality of the resampled images before feeding it into your network!)
                     # neem iets dat deelbaar is door 8
 if False:
     # step1 - build list of filtered filenames
@@ -142,33 +144,31 @@ x = UpSampling2D((2, 2))(x)
 decoded = Conv2D(3, (3, 3), activation='sigmoid', padding='same')(x)
 autoencoder = Model(input_img, decoded)
 autoencoder.compile(optimizer='adam', loss='mse') #binary_crossentropy kan ook maar traint langer per keer
-autoencoder.summary()
 
 #netwerk van 0 trainen
 if False:
     autoencoder.fit(x_train, x_train,
-                    epochs=500,
-                    batch_size=128,
+                    epochs=1000,
+                    batch_size=64,
                     shuffle=True,
                     validation_data=(x_val, x_val))
     tijd = datetime.datetime.now()
     tijdstring = tijd.strftime("%H:%M:%S").replace(":", "_")
-    autoencoder.save_weights("weights"+tijdstring+".h5")
-    #sys.exit()
+    autoencoder.save_weights("data/weights"+tijdstring+".h5")
 else:
     #netwerk nog verder trainen
     if False:
-        autoencoder.load_weights("weights.h5")
+        autoencoder.load_weights("data/weights.h5")
         autoencoder.fit(x_train, x_train,
-                    epochs=1000,
-                    batch_size=128,
+                    epochs=100,
+                    batch_size=64,
                     shuffle=True,
                     validation_data=(x_val, x_val))
         tijd = datetime.datetime.now()
         tijdstring = tijd.strftime("%H:%M:%S").replace(":", "_")
-        autoencoder.save_weights("weights"+tijdstring+".h5")
+        autoencoder.save_weights("data/weights"+tijdstring+".h5")
     else:
-        autoencoder.load_weights("weights.h5")
+        autoencoder.load_weights("data/weights.h5")
 
 
 
@@ -203,73 +203,9 @@ plt.show()
 # https://stackoverflow.com/questions/42081257/keras-binary-crossentropy-vs-categorical-crossentropy-performance
 # https://www.depends-on-the-definition.com/guide-to-multi-label-classification-with-neural-networks/
 #-------------------------
-
-#poging 1
-if False:
-    autoencoder.load_weights("weights.h5")
-    #encoderlayers = autoencoder.layers[:8] # geen idee of dit werkt
-    
-    '''
-    # Freeze the layers
-    for i in range(1,8,2):
-        encoderlayers[i].trainable = False
-    '''
-    
-    input_dim = 4608 #8*8*64
-    output_dim = nb_classes = 5 
-    
-    vgg_model = Model(input_img, encoded)
-    for i in range(len(vgg_model.layers)):
-        vgg_model.layers[i].trainable = False
-    vgg_output = vgg_model.outputs[0]
-    
-    flat = Flatten()(vgg_output)
-    dense1 = Dense(512, input_dim=input_dim, activation='relu')(flat)
-    dropout1 = Dropout(0.5)(dense1)
-    dense2 = Dense(64, input_dim = 512, activation='relu')(dropout1)
-    dropout2 = Dropout(0.5)(dense2)
-    output = Dense(output_dim, input_dim=125, activation='softmax')(dropout2)
-    
-    print("de shape van de dense is: ")
-    print(output.get_shape())
-    
-    batch_size = 256 
-    nb_epoch = 200
-    modelPredict = Model(inputs=vgg_model.inputs, outputs=output)
-    print("summary of modelPredict")
-    modelPredict.summary()
-    print("einde summary of modelPredict")
-    modelPredict.compile(optimizer='adam', loss='binary_crossentropy', metrics=['categorical_accuracy']) 
-    
-    #van 0 trainen
-    if True:
-        history = modelPredict.fit(x_train, y_train, batch_size=batch_size, nb_epoch=nb_epoch,verbose=1, validation_data=(x_val, y_val)) 
-        score = modelPredict.evaluate(x_val, y_val, verbose=0) 
-        print('Test score:', score[0]) 
-        print('Test accuracy:', score[1])
-        tijd = datetime.datetime.now()
-        tijdstring = tijd.strftime("%H:%M:%S").replace(":", "_")
-        modelPredict.save_weights("weightsdeel31"+tijdstring+".h5")
-    else:
-        score = modelPredict.evaluate(x_val, y_val, verbose=0)
-        modelPredict.load_weights("weightsdeel31.h5")
-        
-    predictedValues = modelPredict.predict(x_val)
-    
-    predictedValuesBU = np.copy(predictedValues)
-    
-    naarEen = np.where(predictedValues > 0.6)
-    predictedValues[:,:] = 0
-    predictedValues[naarEen] = 1
-    
-    gelijk = np.sum(y_val == 1)
-    anders = np.sum(predictedValues != y_val)
-    resultaat = 1.0-anders/gelijk
-
-#poging 2
 if True:
     # https://medium.com/@vijayabhaskar96/multi-label-image-classification-tutorial-with-keras-imagedatagenerator-cd541f8eaf24
-    autoencoder.load_weights("weights.h5")
+    #autoencoder.load_weights("data/weights.h5")
     #encoderlayers = autoencoder.layers[:8] # geen idee of dit werkt
     
     '''
@@ -278,100 +214,79 @@ if True:
         encoderlayers[i].trainable = False
     '''
     
-    input_dim = 4608 #8*8*64
+    input_dim = 10368 #18*18*64
     output_dim = nb_classes = 5 
     
-    vgg_model = Model(input_img, encoded)
-    for i in range(len(vgg_model.layers)):
-        vgg_model.layers[i].trainable = False
-    vgg_output = vgg_model.outputs[0]
-    
-    x = Dropout(0.25)(vgg_output)
-    x = Flatten()(x)
-    x = Dense(512)(x)
-    x = Activation('relu')(x)
-    x = Dropout(0.5)(x)
-    x = Dense(64)(x)
-    x = Dropout(0.15)(x)
-    
-    output1 = Dense(1, activation = 'sigmoid')(x)
-    output2 = Dense(1, activation = 'sigmoid')(x)
-    output3 = Dense(1, activation = 'sigmoid')(x)
-    output4 = Dense(1, activation = 'sigmoid')(x)
-    output5 = Dense(1, activation = 'sigmoid')(x)
+    for i in range(len(autoencoder.layers)):
+        autoencoder.layers[i].trainable = False
+    x = autoencoder.layers[12].output
 
-    modelPredict = Model(vgg_model.inputs,[output1,output2,output3,output4,output5])    
+    x = Flatten()(x)
+    x = Dense(2048, input_dim = input_dim, activation='relu')(x)
+    x = Dropout(0.5)(x)
+    x = Dense(2048, input_dim = 4096, activation='relu')(x)
+    x = Dropout(0.5)(x)
     
-    modelPredict.compile(optimizers.rmsprop(lr = 0.0001, decay = 1e-6),
-                  loss = ["binary_crossentropy","binary_crossentropy","binary_crossentropy","binary_crossentropy","binary_crossentropy"],metrics = ["accuracy"])
+    output1 = Dense(1, input_dim = 1024, activation = 'sigmoid')(x)
+    output2 = Dense(1, input_dim = 1024, activation = 'sigmoid')(x)
+    output3 = Dense(1, input_dim = 1024, activation = 'sigmoid')(x)
+    output4 = Dense(1, input_dim = 1024, activation = 'sigmoid')(x)
+    output5 = Dense(1, input_dim = 1024, activation = 'sigmoid')(x)
+
+    modelPredict = Model(autoencoder.inputs,[output1,output2,output3,output4,output5])    
     
-    y_train_parts = []
-    y_val_parts = []
-    for i in range (0,5):
-        y_train_parts.append(y_train[:,i].ravel())
-        y_val_parts.append(y_val[:,i].ravel())
-    
-    modelPredict.fit(x_train, y_train_parts, batch_size=128, nb_epoch=300,verbose=1, validation_data=(x_val, y_val_parts))
+    modelPredict.compile(optimizer = "sgd", loss = ["mse","mse","mse","mse","mse"], metrics=[])
+    #train van 0
+    if False:
+        y_train_parts = []
+        y_val_parts = []
+        for i in range (0,5):
+            y_train_parts.append(y_train[:,i].ravel())
+            y_val_parts.append(y_val[:,i].ravel())
+        
+        modelPredict.fit(x_train, y_train_parts, batch_size=64, nb_epoch=200,verbose=1, validation_data=(x_val, y_val_parts))
+        tijd = datetime.datetime.now()
+        tijdstring = tijd.strftime("%H:%M:%S").replace(":", "_")
+        modelPredict.save_weights("data/weightsdeel31new"+tijdstring+".h5")
+    else:
+        modelPredict.load_weights("data/weightsdeel31.h5")
     
     predictedValues = modelPredict.predict(x_val)
-    
-    predictedValuesBU = np.copy(predictedValues)
     
     predictedValues = np.asarray(predictedValues)
     predictedValues = np.transpose(predictedValues)
+    predictedValuesBU = np.copy(predictedValues)
     
-    naarEen = np.where(predictedValues > 0.6)
-    predictedValues[:,:] = 0
-    predictedValues[naarEen] = 1
+    # accuracy test
+    hoogsteClassificatie = np.apply_along_axis(np.argmax,1,predictedValues[0])
     
-    gelijk = np.sum(y_val == 1)
-    anders = np.sum(predictedValues != y_val)
-    resultaat = 1.0-anders/gelijk
+    juistVoorspeld = 0
+    for i,row in enumerate(y_val):
+        if row[hoogsteClassificatie[i]] == 1:
+            juistVoorspeld += 1
+    accuracy = juistVoorspeld/len(y_val)
+    print("accuracy is: " + str(accuracy))
     
-    tijd = datetime.datetime.now()
-    tijdstring = tijd.strftime("%H:%M:%S").replace(":", "_")
-    modelPredict.save_weights("weightsdeel31new"+tijdstring+".h5")
-
-
+    for _ in range (0,50):
+        i = random.randint(0, len(y_val))
+        io.imshow(x_val[i])
+    
+        text = ""
+        for j,classe in enumerate(filter):
+            text = text + classe + ": " + str(round(predictedValuesBU[0,i,j],2)) + "\n"
+        for k,l in enumerate(y_val[i]):
+            if l == 1:
+                text = text + " " + filter[k] + "\n"
+            
+        plt.xlabel(text)
+        plt.show()
+    
 #-------------------------
 #TWEEDE MODEL
 #-------------------------
-#poging 1 (niet meer up to date)
-if False:
-    autoencoder.load_weights("weights.h5")
-    #encoderlayers = autoencoder.layers[:8] # geen idee of dit werkt
-    
-    input_dim = 4096 #8*8*64
-    output_dim = nb_classes = 5 
-    
-    input_img = Input(shape=(image_size, image_size, 3))  # adapt this if using `channels_first` image data format, origineel (28,28,1) dit wilt zeggen 28 breed 28 hoog en 1 diep (zwart wit dus)
-    x = Conv2D(16, (3, 3), activation='relu', padding='same', kernel_initializer ='random_normal')(input_img) #eerste argument is the dimensionality of the output space (i.e. the number of output filters in the convolution).
-    x = MaxPooling2D((2, 2), padding='same')(x)
-    x = Conv2D(32, (3, 3), activation='relu', padding='same', kernel_initializer ='random_normal')(x)
-    x = MaxPooling2D((2, 2), padding='same')(x)
-    x = Conv2D(32, (3, 3), activation='relu', padding='same', kernel_initializer ='random_normal')(x)
-    x = MaxPooling2D((2, 2), padding='same')(x)
-    x = Conv2D(64, (3, 3), activation='relu', padding='same', kernel_initializer ='random_normal')(x)
-    encoded2 = MaxPooling2D((2, 2), padding='same')(x)
-    flat = Flatten()(encoded2)
-    output = Dense(output_dim, input_dim=input_dim, activation='softmax')(flat)
-    
-    batch_size = 128 
-    nb_epoch = 300
-    modelPredict2 = Model(input_img, outputs=output)
-    print("summary of modelPredict")
-    modelPredict.summary()
-    print("einde summary of modelPredict")
-    modelPredict.compile(optimizer='sgd', loss='categorical_crossentropy', metrics=['accuracy']) 
-    history = modelPredict.fit(x_train, y_train, batch_size=batch_size, nb_epoch=nb_epoch,verbose=1, validation_data=(x_val, y_val)) 
-    score = modelPredict.evaluate(x_val, y_val, verbose=0) 
-    print('Test score:', score[0]) 
-    print('Test accuracy:', score[1])
-
-#poging 2
 if False:
     # https://medium.com/@vijayabhaskar96/multi-label-image-classification-tutorial-with-keras-imagedatagenerator-cd541f8eaf24
-    autoencoder.load_weights("weights.h5")
+    autoencoder.load_weights("data/weights.h5")
     #encoderlayers = autoencoder.layers[:8] # geen idee of dit werkt
     
     '''
@@ -380,41 +295,41 @@ if False:
         encoderlayers[i].trainable = False
     '''
     
-    input_dim = 4608 #8*8*64
+    input_dim = 10368 #8*8*64
     output_dim = nb_classes = 5 
     
     input_img = Input(shape=(image_size, image_size, 3))  # adapt this if using `channels_first` image data format, origineel (28,28,1) dit wilt zeggen 28 breed 28 hoog en 1 diep (zwart wit dus)
     
-    x = Conv2D(16, (3, 3), activation='relu', padding='same')(input_img) #eerste argument is the dimensionality of the output space (i.e. the number of output filters in the convolution).
-    x = Conv2D(16, (3, 3), activation='relu', padding='same')(x)
-    x = Conv2D(16, (3, 3), activation='relu', padding='same')(x)
+    x = Conv2D(16, (3, 3), activation='relu', padding='same', kernel_initializer='random_uniform')(input_img) #eerste argument is the dimensionality of the output space (i.e. the number of output filters in the convolution).
+    x = Conv2D(16, (3, 3), activation='relu', padding='same', kernel_initializer='random_uniform')(x)
+    x = Conv2D(16, (3, 3), activation='relu', padding='same', kernel_initializer='random_uniform')(x)
     x = MaxPooling2D((2, 2), padding='same')(x)
     x = Dropout(0.25)(x)
-    x = Conv2D(32, (3, 3), activation='relu', padding='same')(x)
-    x = Conv2D(32, (3, 3), activation='relu', padding='same')(x)
-    x = Conv2D(32, (3, 3), activation='relu', padding='same')(x)
+    x = Conv2D(32, (3, 3), activation='relu', padding='same', kernel_initializer='random_uniform')(x)
+    x = Conv2D(32, (3, 3), activation='relu', padding='same', kernel_initializer='random_uniform')(x)
+    x = Conv2D(32, (3, 3), activation='relu', padding='same', kernel_initializer='random_uniform')(x)
     x = MaxPooling2D((2, 2), padding='same')(x)
     x = Dropout(0.25)(x)
-    x = Conv2D(32, (3, 3), activation='relu', padding='same')(x)
-    x = Conv2D(32, (3, 3), activation='relu', padding='same')(x)
-    x = Conv2D(32, (3, 3), activation='relu', padding='same')(x)
+    x = Conv2D(32, (3, 3), activation='relu', padding='same', kernel_initializer='random_uniform')(x)
+    x = Conv2D(32, (3, 3), activation='relu', padding='same', kernel_initializer='random_uniform')(x)
+    x = Conv2D(32, (3, 3), activation='relu', padding='same', kernel_initializer='random_uniform')(x)
     encoded = MaxPooling2D((2, 2), padding='same')(x)
     
-    x = Dropout(0.25)(encoded)
-    x = Flatten()(x)
-    x = Dense(512, activation = 'relu')(x)
+    x = Flatten()(encoded)
+    x = Dense(2048, input_dim = input_dim, activation='relu', kernel_initializer='random_uniform')(x)
+    x = Dropout(0.5)(x)
+    x = Dense(2048, input_dim = 4096, activation='relu', kernel_initializer='random_uniform')(x)
     x = Dropout(0.5)(x)
     
-    output1 = Dense(1, activation = 'sigmoid')(x)
-    output2 = Dense(1, activation = 'sigmoid')(x)
-    output3 = Dense(1, activation = 'sigmoid')(x)
-    output4 = Dense(1, activation = 'sigmoid')(x)
-    output5 = Dense(1, activation = 'sigmoid')(x)
+    output1 = Dense(1, input_dim = 1024, activation = 'sigmoid', kernel_initializer='random_uniform')(x)
+    output2 = Dense(1, input_dim = 1024, activation = 'sigmoid', kernel_initializer='random_uniform')(x)
+    output3 = Dense(1, input_dim = 1024, activation = 'sigmoid', kernel_initializer='random_uniform')(x)
+    output4 = Dense(1, input_dim = 1024, activation = 'sigmoid', kernel_initializer='random_uniform')(x)
+    output5 = Dense(1, input_dim = 1024, activation = 'sigmoid', kernel_initializer='random_uniform')(x)
 
     modelPredict = Model(input_img,[output1,output2,output3,output4,output5])    
     modelPredict.summary()
-    modelPredict.compile(optimizer="adam",
-                  loss = ["binary_crossentropy","binary_crossentropy","binary_crossentropy","binary_crossentropy","binary_crossentropy"],metrics = ["accuracy"])
+    modelPredict.compile(optimizer = "sgd", loss = ["mse","mse","mse","mse","mse"], metrics=[])
     
     y_train_parts = []
     y_val_parts = []
@@ -422,25 +337,10 @@ if False:
         y_train_parts.append(y_train[:,i].ravel())
         y_val_parts.append(y_val[:,i].ravel())
     
-    modelPredict.fit(x_train, y_train_parts, batch_size=128, nb_epoch=300,verbose=1, validation_data=(x_val, y_val_parts))
-    
-    predictedValues = modelPredict.predict(x_val)
-    
-    predictedValuesBU = np.copy(predictedValues)
-    
-    predictedValues = np.asarray(predictedValues)
-    predictedValues = np.transpose(predictedValues)
-    
-    naarEen = np.where(predictedValues > 0.6)
-    predictedValues[:,:] = 0
-    predictedValues[naarEen] = 1
-    
-    gelijk = np.sum(y_val == 1)
-    anders = np.sum(predictedValues != y_val)
-    resultaat = 1.0-anders/gelijk
+    modelPredict.fit(x_train, y_train_parts, batch_size=64, nb_epoch=150,verbose=1, validation_data=(x_val, y_val_parts))
     
     tijd = datetime.datetime.now()
     tijdstring = tijd.strftime("%H:%M:%S").replace(":", "_")
-    modelPredict.save_weights("weightsdeel31new"+tijdstring+".h5")
+    modelPredict.save_weights("data/weightsdeel31new"+tijdstring+".h5")
 
 
