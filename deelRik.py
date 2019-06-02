@@ -358,7 +358,25 @@ if False:
         y_train_parts.append(y_train[:,i].ravel())
         y_val_parts.append(y_val[:,i].ravel())
     
-    modelPredict.fit(x_train, y_train_parts, batch_size=64, nb_epoch=150,verbose=1, validation_data=(x_val, y_val_parts))
+    history = modelPredict.fit(x_train, y_train_parts, batch_size=64, nb_epoch=150,verbose=1, validation_data=(x_val, y_val_parts))
+    
+    print(history.history.keys())
+    # summarize history for accuracy
+    plt.plot(history.history['acc'])
+    plt.plot(history.history['val_acc'])
+    plt.title('model accuracy')
+    plt.ylabel('accuracy')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'test'], loc='upper left')
+    plt.show()
+    # summarize history for loss
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('model loss')
+    plt.ylabel('loss')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'test'], loc='upper left')
+    plt.show()
     
     tijd = datetime.datetime.now()
     tijdstring = tijd.strftime("%H:%M:%S").replace(":", "_")
