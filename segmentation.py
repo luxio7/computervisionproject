@@ -23,6 +23,8 @@ from model import *
 from keras.callbacks import ModelCheckpoint, LearningRateScheduler
 import cv2
 
+import matplotlib.pyplot as plt
+
 
 #%%
 # parameters that you should set before running this script
@@ -137,7 +139,21 @@ def saveResult(save_path,npyfile,flag_multi_class = False,num_class = 2):
 saveResult("results/binary",results)
 
 
+def showResult(index):
+        fig=plt.figure(figsize = (10,10))
+        fig.add_subplot(221)
+        plt.imshow(x_val[index])
+        fig.add_subplot(222)
+        plt.imshow(y_val[index][:,:,0])
+        fig.add_subplot(223)
+        res = results[index][:,:,0]
+        ret, binary_img = cv2.threshold(res, 0.5, 1, cv2.THRESH_BINARY)
+        plt.imshow(binary_img)
 
+        #io.imshow(x_val[index])
+        #io.imshow(y_val[index][:,:,0])
+
+        #io.imshow(binary_img)
 
 
 sys.exit()
