@@ -143,11 +143,14 @@ x = Conv2D(16, (3, 3), activation='relu', padding='same')(x)
 x = UpSampling2D((2, 2))(x)
 decoded = Conv2D(3, (3, 3), activation='sigmoid', padding='same')(x)
 autoencoder = Model(input_img, decoded)
-autoencoder.compile(optimizer='adam', loss='mse') #binary_crossentropy kan ook maar traint langer per keer
+autoencoder.summary()
+
+autoencoder.compile(optimizer='adam', loss='mse', metrics=['accuracy']) #binary_crossentropy kan ook maar traint langer per keer
+
 
 #netwerk van 0 trainen
-if False:
-    autoencoder.fit(x_train, x_train,
+if True:
+    history = autoencoder.fit(x_train, x_train,
                     epochs=1000,
                     batch_size=64,
                     shuffle=True,
@@ -155,6 +158,24 @@ if False:
     tijd = datetime.datetime.now()
     tijdstring = tijd.strftime("%H:%M:%S").replace(":", "_")
     autoencoder.save_weights("data/weights"+tijdstring+".h5")
+    
+    print(history.history.keys())
+    # summarize history for accuracy
+    plt.plot(history.history['acc'])
+    plt.plot(history.history['val_acc'])
+    plt.title('model accuracy')
+    plt.ylabel('accuracy')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'test'], loc='upper left')
+    plt.show()
+    # summarize history for loss
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('model loss')
+    plt.ylabel('loss')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'test'], loc='upper left')
+    plt.show()
 else:
     #netwerk nog verder trainen
     if False:
@@ -203,7 +224,7 @@ plt.show()
 # https://stackoverflow.com/questions/42081257/keras-binary-crossentropy-vs-categorical-crossentropy-performance
 # https://www.depends-on-the-definition.com/guide-to-multi-label-classification-with-neural-networks/
 #-------------------------
-if True:
+if False:
     # https://medium.com/@vijayabhaskar96/multi-label-image-classification-tutorial-with-keras-imagedatagenerator-cd541f8eaf24
     #autoencoder.load_weights("data/weights.h5")
     #encoderlayers = autoencoder.layers[:8] # geen idee of dit werkt
@@ -235,16 +256,16 @@ if True:
 
     modelPredict = Model(autoencoder.inputs,[output1,output2,output3,output4,output5])    
     
-    modelPredict.compile(optimizer = "sgd", loss = ["mse","mse","mse","mse","mse"], metrics=[])
+    modelPredict.compile(optimizer = "SGD", loss = ["binary_crossentropy","binary_crossentropy","binary_crossentropy","binary_crossentropy","binary_crossentropy"], metrics=[])
     #train van 0
-    if False:
+    if True:
         y_train_parts = []
         y_val_parts = []
         for i in range (0,5):
             y_train_parts.append(y_train[:,i].ravel())
             y_val_parts.append(y_val[:,i].ravel())
         
-        modelPredict.fit(x_train, y_train_parts, batch_size=64, nb_epoch=200,verbose=1, validation_data=(x_val, y_val_parts))
+        modelPredict.fit(x_train, y_train_parts,shuffle=True, batch_size=64, nb_epoch=18,verbose=1, validation_data=(x_val, y_val_parts))
         tijd = datetime.datetime.now()
         tijdstring = tijd.strftime("%H:%M:%S").replace(":", "_")
         modelPredict.save_weights("data/weightsdeel31new"+tijdstring+".h5")
