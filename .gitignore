@@ -7,3 +7,5 @@ seg_x_train.txt
 seg_y_train.txt
 seg_x_val.txt
 seg_y_val.txt
+__pychache__
+results

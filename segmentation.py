@@ -7,7 +7,7 @@ Created on Sun May 26 20:40:26 2019
 from lxml import etree
 import numpy as np
 import os
-from skimage import io
+from skimage import io, color
 from skimage.transform import resize
 from keras.layers import Input, Dense, Conv2D, MaxPooling2D, UpSampling2D, Flatten, Activation
 from keras.models import Model
@@ -21,6 +21,7 @@ import sys
 import datetime
 from model import *
 from keras.callbacks import ModelCheckpoint, LearningRateScheduler
+import cv2
 
 
 #%%
@@ -32,7 +33,7 @@ image_size = 256    # image size that you will use for your network (input image
                     # neem iets dat deelbaar is door 8
         
 #%%            
-if False:
+if True:
     print("step 1")
     # step1 - build list of filtered filenames
     """
@@ -54,16 +55,14 @@ if False:
     train_file = os.path.join(classes_folder, 'train.txt')
     val_file = os.path.join(classes_folder, 'val.txt')
         
-    def build_classification_dataset(f_cf):
+    def build_segmentation_data(dataset_file):
         """ build training or validation set
     
         :param list_of_files: list of filenames to build trainset with
         :return: tuple with x np.ndarray of shape (n_images, image_size, image_size, 3) and  y np.ndarray of shape (n_images, n_classes)
         """
         temp = []
-        train_labels = []
-        #for f_cf in list_of_files:
-        with open(f_cf) as file:
+        with open(dataset_file) as file:
             temp = file.read().splitlines()
             #temp.append([line.split()[0] for line in lines if int(line.split()[-1]) == 1])
             #label_id = [f_ind for f_ind, filt in enumerate(filter) if filt in f_cf][0]
@@ -72,24 +71,22 @@ if False:
     
         image_folder = os.path.join(voc_root_folder, "VOC2009/JPEGImages/")
         image_filenames = [os.path.join(image_folder, file) for f in temp for file in os.listdir(image_folder) if f in file]
-        #image_filenames = [os.path.join(image_folder, file) for f in train_filter for file in os.listdir(image_folder) if f in file]
         x = np.array([resize(io.imread(img_f), (image_size, image_size, 3)) for img_f in image_filenames]).astype(
             'float32')
-        # changed y to an array of shape (num_examples, num_classes) with 0 if class is not present and 1 if class is present
-        """
-        y_temp = []
-        for tf in train_filter:
-            y_temp.append([1 if tf in l else 0 for l in temp])
-        y = np.array(y_temp)
-        """
         segmentation_image_folder = os.path.join(voc_root_folder, "VOC2009/SegmentationClass")
         segmentation_filenames = [os.path.join(segmentation_image_folder, file) for f in temp for file in os.listdir(segmentation_image_folder) if f in file]
-        y = np.array([resize(io.imread(img_f), (image_size, image_size, 3)) for img_f in segmentation_filenames]).astype('float32')
+        y = np.array([process_segmentation_y_values(img_f) for img_f in segmentation_filenames]).astype('float32')
         return x, y
     
-    x_train, y_train = build_classification_dataset(train_file)
+    
+    def process_segmentation_y_values(img_file):
+        gray = color.rgb2gray(io.imread(img_file))
+        ret, binary_img = cv2.threshold(gray, 0.001, 1, cv2.THRESH_BINARY)
+        return resize(binary_img, (image_size, image_size, 1))
+    
+    x_train, y_train = build_segmentation_data(train_file)
     print('%i training images with %i segmentated images' %(x_train.shape[0], y_train.shape[0]))
-    x_val, y_val = build_classification_dataset(val_file)
+    x_val, y_val = build_segmentation_data(val_file)
     print('%i validation images with %i segmentated images' %(x_val.shape[0], y_val.shape[0]))
     
         # ------------------------
@@ -124,41 +121,20 @@ print("creating model")
 model = unet()
 #model_checkpoint = ModelCheckpoint('unet_membrane.hdf5', monitor='loss',verbose=1, save_best_only=True)
 #model.fit(x_train, y_train,epochs=300,batch_size = 128, shuffle = True, callbacks=[model_checkpoint])
-model.fit(x_train, y_train,epochs=300,batch_size = 128, shuffle = True)
+model.fit(x_train, y_train,epochs=3,batch_size = 1, shuffle = True)
 
-results = model.predict(x_val,32, steps = 1,verbose=1)
+model.save_weights("models/segmentation.h5")
 
+results = model.predict(x_val,1,verbose=1)
 
-Sky = [128,128,128]
-Building = [128,0,0]
-Pole = [192,192,128]
-Road = [128,64,128]
-Pavement = [60,40,222]
-Tree = [128,128,0]
-SignSymbol = [192,128,128]
-Fence = [64,64,128]
-Car = [64,0,128]
-Pedestrian = [64,64,0]
-Bicyclist = [0,128,192]
-Unlabelled = [0,0,0]
-
-
-COLOR_DICT = np.array([Sky, Building, Pole, Road, Pavement,
-                          Tree, SignSymbol, Fence, Car, Pedestrian, Bicyclist, Unlabelled])
     
 def saveResult(save_path,npyfile,flag_multi_class = False,num_class = 2):
     for i,item in enumerate(npyfile):
-        img = labelVisualize(num_class,COLOR_DICT,item) if flag_multi_class else item[:,:,0]
-        io.imsave(os.path.join(save_path,"%d_predict.png"%i),img)
-        
-def labelVisualize(num_class,color_dict,img):
-    img = img[:,:,0] if len(img.shape) == 3 else img
-    img_out = np.zeros(img.shape + (3,))
-    for i in range(num_class):
-        img_out[img == i,:] = color_dict[i]
-    return img_out / 255
+        res = item[:,:,0]
+        ret, binary_img = cv2.threshold(res, 0.5, 1, cv2.THRESH_BINARY)
+        io.imsave(os.path.join(save_path,"%d_predict.png"%i),binary_img)
 
-saveResult("results/segmentation/test",results)
+saveResult("results/binary",results)
 
 
 
