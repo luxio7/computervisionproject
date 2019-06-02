@@ -9,4 +9,4 @@ seg_x_val.txt
 seg_y_val.txt
 __pychache__
 results
-models/segmentation.h5
+models
