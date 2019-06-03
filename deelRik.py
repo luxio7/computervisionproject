@@ -371,6 +371,12 @@ if True:
     modelPredict.summary()
     modelPredict.compile(optimizer = "adam", loss = ["binary_crossentropy","binary_crossentropy","binary_crossentropy","binary_crossentropy","binary_crossentropy"], metrics=[])
     
+    y_train_parts = []
+    y_val_parts = []
+    for i in range (0,5):
+        y_train_parts.append(y_train[:,i].ravel())
+        y_val_parts.append(y_val[:,i].ravel())
+    
     history = modelPredict.fit(x_train, y_train_parts, batch_size=64,shuffle=True, nb_epoch=200,verbose=1, validation_data=(x_val, y_val_parts))
     
     print(history.history.keys())
