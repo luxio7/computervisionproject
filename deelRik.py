@@ -10,6 +10,7 @@ from keras import optimizers
 from keras.models import Sequential 
 import pickle
 from matplotlib import pyplot as plt
+from keras.utils.vis_utils import plot_model
 import sys
 import random
 import datetime
@@ -76,6 +77,12 @@ if False:
     
     # store output -> dat elke keer maken duurt te lang
     
+# =============================================================================
+#     io.imshow(x_val[0])
+#     plt.show()
+#     sys.exit()
+# =============================================================================
+    
     # Saving the objects:
     with open('x_train.txt', 'wb') as f:
         pickle.dump(x_train, f)
@@ -109,6 +116,8 @@ else:
 # https://github.com/shibuiwilliam/Keras_Autoencoder/blob/master/Cifar_Conv_AutoEncoder.ipynb
 # https://towardsdatascience.com/a-guide-to-an-efficient-way-to-build-neural-network-architectures-part-ii-hyper-parameter-42efca01e5d7
 
+autoencoder = None
+'''
 input_img = Input(shape=(image_size, image_size, 3))  # adapt this if using `channels_first` image data format, origineel (28,28,1) dit wilt zeggen 28 breed 28 hoog en 1 diep (zwart wit dus)
 
 x = Conv2D(16, (3, 3), activation='relu', padding='same')(input_img) #eerste argument is the dimensionality of the output space (i.e. the number of output filters in the convolution).
@@ -143,13 +152,12 @@ x = Conv2D(16, (3, 3), activation='relu', padding='same')(x)
 x = UpSampling2D((2, 2))(x)
 decoded = Conv2D(3, (3, 3), activation='sigmoid', padding='same')(x)
 autoencoder = Model(input_img, decoded)
-autoencoder.summary()
-
 autoencoder.compile(optimizer='adam', loss='mse', metrics=['accuracy']) #binary_crossentropy kan ook maar traint langer per keer
 
 
+
 #netwerk van 0 trainen
-if True:
+if False:
     history = autoencoder.fit(x_train, x_train,
                     epochs=1000,
                     batch_size=64,
@@ -201,7 +209,7 @@ testPicture = np.asarray([x_val[0].tolist()])
 uitkomst = autoencoder.predict(testPicture)[0]
 io.imshow(uitkomst)
 plt.show()
-
+'''
 
 # =============================================================================
 # CLASSIFICATIE (deel 3)
@@ -256,7 +264,10 @@ if False:
 
     modelPredict = Model(autoencoder.inputs,[output1,output2,output3,output4,output5])    
     
-    modelPredict.compile(optimizer = "SGD", loss = ["binary_crossentropy","binary_crossentropy","binary_crossentropy","binary_crossentropy","binary_crossentropy"], metrics=[])
+    plot_model(modelPredict, to_file='model_plot_modelPredict.png', show_shapes=True, show_layer_names=True)
+    modelPredict.summary()
+    
+    modelPredict.compile(optimizer = "SGD", loss = ["mse","mse","mse","mse","mse"], metrics=[])
     #train van 0
     if True:
         y_train_parts = []
@@ -265,10 +276,21 @@ if False:
             y_train_parts.append(y_train[:,i].ravel())
             y_val_parts.append(y_val[:,i].ravel())
         
-        modelPredict.fit(x_train, y_train_parts,shuffle=True, batch_size=64, nb_epoch=18,verbose=1, validation_data=(x_val, y_val_parts))
+        history = modelPredict.fit(x_train, y_train_parts,shuffle=True, batch_size=64, nb_epoch=50,verbose=1, validation_data=(x_val, y_val_parts))
         tijd = datetime.datetime.now()
         tijdstring = tijd.strftime("%H:%M:%S").replace(":", "_")
         modelPredict.save_weights("data/weightsdeel31new"+tijdstring+".h5")
+        
+        print(history.history.keys())
+        # summarize history for loss
+        plt.plot(history.history['loss'])
+        plt.plot(history.history['val_loss'])
+        plt.title('model loss')
+        plt.ylabel('loss')
+        plt.xlabel('epoch')
+        plt.legend(['train', 'test'], loc='upper left')
+        plt.show()
+        
     else:
         modelPredict.load_weights("data/weightsdeel31.h5")
     
@@ -305,9 +327,8 @@ if False:
 #-------------------------
 #TWEEDE MODEL
 #-------------------------
-if False:
+if True:
     # https://medium.com/@vijayabhaskar96/multi-label-image-classification-tutorial-with-keras-imagedatagenerator-cd541f8eaf24
-    autoencoder.load_weights("data/weights.h5")
     #encoderlayers = autoencoder.layers[:8] # geen idee of dit werkt
     
     '''
@@ -350,7 +371,7 @@ if False:
 
     modelPredict = Model(input_img,[output1,output2,output3,output4,output5])    
     modelPredict.summary()
-    modelPredict.compile(optimizer = "sgd", loss = ["mse","mse","mse","mse","mse"], metrics=[])
+    modelPredict.compile(optimizer = "adam", loss = ["binary_crossentropy","binary_crossentropy","binary_crossentropy","binary_crossentropy","binary_crossentropy"], metrics=[])
     
     y_train_parts = []
     y_val_parts = []
@@ -358,17 +379,9 @@ if False:
         y_train_parts.append(y_train[:,i].ravel())
         y_val_parts.append(y_val[:,i].ravel())
     
-    history = modelPredict.fit(x_train, y_train_parts, batch_size=64, nb_epoch=150,verbose=1, validation_data=(x_val, y_val_parts))
+    history = modelPredict.fit(x_train, y_train_parts, batch_size=64, nb_epoch=200,verbose=1, validation_data=(x_val, y_val_parts))
     
     print(history.history.keys())
-    # summarize history for accuracy
-    plt.plot(history.history['acc'])
-    plt.plot(history.history['val_acc'])
-    plt.title('model accuracy')
-    plt.ylabel('accuracy')
-    plt.xlabel('epoch')
-    plt.legend(['train', 'test'], loc='upper left')
-    plt.show()
     # summarize history for loss
     plt.plot(history.history['loss'])
     plt.plot(history.history['val_loss'])
@@ -381,5 +394,35 @@ if False:
     tijd = datetime.datetime.now()
     tijdstring = tijd.strftime("%H:%M:%S").replace(":", "_")
     modelPredict.save_weights("data/weightsdeel31new"+tijdstring+".h5")
+    
+    predictedValues = modelPredict.predict(x_val)
+    
+    predictedValues = np.asarray(predictedValues)
+    predictedValues = np.transpose(predictedValues)
+    predictedValuesBU = np.copy(predictedValues)
+    
+    # accuracy test
+    hoogsteClassificatie = np.apply_along_axis(np.argmax,1,predictedValues[0])
+    
+    juistVoorspeld = 0
+    for i,row in enumerate(y_val):
+        if row[hoogsteClassificatie[i]] == 1:
+            juistVoorspeld += 1
+    accuracy = juistVoorspeld/len(y_val)
+    print("accuracy is: " + str(accuracy))
+    
+    for _ in range (0,50):
+        i = random.randint(0, len(y_val))
+        io.imshow(x_val[i])
+    
+        text = ""
+        for j,classe in enumerate(filter):
+            text = text + classe + ": " + str(round(predictedValuesBU[0,i,j],2)) + "\n"
+        for k,l in enumerate(y_val[i]):
+            if l == 1:
+                text = text + " " + filter[k] + "\n"
+            
+        plt.xlabel(text)
+        plt.show()
 
 
