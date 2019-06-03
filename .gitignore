@@ -7,3 +7,6 @@ seg_x_train.txt
 seg_y_train.txt
 seg_x_val.txt
 seg_y_val.txt
+results
+__pycache__
+models
