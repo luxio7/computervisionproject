@@ -7,6 +7,7 @@ Created on Mon Jun  3 11:33:44 2019
 from keras.preprocessing.image import ImageDataGenerator
 from model import unet
 from keras.callbacks import ModelCheckpoint
+from keras.models import load_model
 
 #BATCH_SIZE = 32
 #EPOCHS 

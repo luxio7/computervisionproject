@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from keras.models import load_model
 
 
-MODEL_PATH = "models/segmentation.hdf5"
+MODEL_PATH = "models/segmentationBroken.hdf5"
 
 model = load_model(MODEL_PATH)
 
@@ -30,7 +30,7 @@ def saveResult(save_path,npyfile,thresholded = True, threshold = 0.5):
 def showResult(index, threshold = 0.2):
         fig=plt.figure(figsize = (10,10))
         fig.add_subplot(221)
-        plt.imshow(x_val[index][:,:,0])
+        plt.imshow(x_val[index][:,:])
         fig.add_subplot(222)
         plt.imshow(y_val[index][:,:,0])
         fig.add_subplot(223)

@@ -93,11 +93,11 @@ def prepareSegm5ClassesGrayData():
     # Saving the objects:
     with open('data/ProcessedData/seg_x_train_5_classes_gray.txt', 'wb') as f:
         pickle.dump(x_train, f)
-    with open('data/ProcessedData/seg_y_train.txt_5_classes_gray', 'wb') as f:
+    with open('data/ProcessedData/seg_y_train.txt_5_classes_gray.txt', 'wb') as f:
         pickle.dump(y_train, f)
-    with open('data/ProcessedData/seg_x_val.txt_5_classes_gray', 'wb') as f:
+    with open('data/ProcessedData/seg_x_val.txt_5_classes_gray.txt', 'wb') as f:
         pickle.dump(x_val, f)
-    with open('data/ProcessedData/seg_y_val.txt_5_classes_gray', 'wb') as f:
+    with open('data/ProcessedData/seg_y_val.txt_5_classes_gray.txt', 'wb') as f:
         pickle.dump(y_val, f)
     return x_train, y_train, x_val, y_val
 
