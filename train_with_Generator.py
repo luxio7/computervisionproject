@@ -14,14 +14,15 @@ from keras.callbacks import ModelCheckpoint
 #https://www.pyimagesearch.com/2018/12/24/how-to-use-keras-fit-and-fit_generator-a-hands-on-tutorial/
 #https://keras.io/preprocessing/image/
 #model = unet()
-def train_model(model, x_train, y_train, val_data, model_name = "segmentation.h5", 
+def train_model(x_train, y_train, val_data, model_name = "segmentation.hdf5", 
                 create_new_model = False, batch_s = 2, nb_epochs = 5):
     model_path = "models/"+model_name
     if create_new_model:
         print("creating model")
+        model = unet()
     else:
-        print("loading model")
-        model.load_weights(model_path)
+        print("loading model :"+ model_path)
+        model = load_model(model_path)
         
     #create image augmentation data generator 
     aug = ImageDataGenerator(rotation_range = 0.05, 
@@ -39,9 +40,7 @@ def train_model(model, x_train, y_train, val_data, model_name = "segmentation.h5
             steps_per_epoch = len(x_train)//batch_s, 
             epochs = nb_epochs,
             validation_data = val_data,
-            callbacks = [model_checkpoint])
-    #history = model.fit(x_train, y_train, nb_batches = 16, epoch = 5, verbose = 1, shuffle = True)
-    
+            callbacks = [model_checkpoint])    
     #model.save_weights(model_path)
     
     return history

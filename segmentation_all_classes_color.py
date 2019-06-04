@@ -160,7 +160,3 @@ def showResult(index, thresholded=True, threshold = 0.5):
             ret, res = cv2.threshold(res, threshold, 1, cv2.THRESH_BINARY)
         plt.imshow(res)
 
-        #io.imshow(x_val[index])
-        #io.imshow(y_val[index][:,:,0])
-
-        #io.imshow(binary_img)

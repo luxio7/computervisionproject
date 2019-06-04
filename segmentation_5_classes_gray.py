@@ -39,8 +39,8 @@ def prepareSegm5ClassesGrayData():
     val_files = [os.path.join(classes_folder, c_f) for filt in filter for c_f in classes_files if filt in c_f and '_val.txt' in c_f]
     
     seg_folder = os.path.join(voc_root_folder, "VOC2009/ImageSets/Segmentation")
-    seg_train_file = os.path.join(classes_folder, 'train.txt')
-    seg_val_file = os.path.join(classes_folder, 'val.txt')
+    seg_train_file = os.path.join(seg_folder, 'train.txt')
+    seg_val_file = os.path.join(seg_folder, 'val.txt')
     def build_segmentation_data(list_of_files, seg_file):
         """ build training or validation set
     
@@ -64,7 +64,7 @@ def prepareSegm5ClassesGrayData():
     
         image_folder = os.path.join(voc_root_folder, "VOC2009/JPEGImages/")
         image_filenames = [os.path.join(image_folder, file) for f in seg_train_filter for file in os.listdir(image_folder) if f in file]
-        x = np.array([resize(io.imread(img_f), (image_size, image_size, 3)) for img_f in image_filenames]).astype(
+        x = np.array([process_x_values(img_f) for img_f in image_filenames]).astype(
             'float32')
         segmentation_image_folder = os.path.join(voc_root_folder, "VOC2009/SegmentationClass")
         segmentation_filenames = [os.path.join(segmentation_image_folder, file) for f in seg_train_filter for file in os.listdir(segmentation_image_folder) if f in file]
