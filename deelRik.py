@@ -267,7 +267,7 @@ if False:
     plot_model(modelPredict, to_file='model_plot_modelPredict.png', show_shapes=True, show_layer_names=True)
     modelPredict.summary()
     
-    modelPredict.compile(optimizer = "SGD", loss = ["mse","mse","mse","mse","mse"], metrics=[])
+    modelPredict.compile(optimizer = "adam", loss = ["mse","mse","mse","mse","mse"], metrics=[])
     #train van 0
     if True:
         y_train_parts = []
@@ -346,12 +346,10 @@ if True:
     x = Conv2D(16, (3, 3), activation='relu', padding='same', kernel_initializer='random_uniform')(x)
     x = Conv2D(16, (3, 3), activation='relu', padding='same', kernel_initializer='random_uniform')(x)
     x = MaxPooling2D((2, 2), padding='same')(x)
-    x = Dropout(0.25)(x)
     x = Conv2D(32, (3, 3), activation='relu', padding='same', kernel_initializer='random_uniform')(x)
     x = Conv2D(32, (3, 3), activation='relu', padding='same', kernel_initializer='random_uniform')(x)
     x = Conv2D(32, (3, 3), activation='relu', padding='same', kernel_initializer='random_uniform')(x)
     x = MaxPooling2D((2, 2), padding='same')(x)
-    x = Dropout(0.25)(x)
     x = Conv2D(32, (3, 3), activation='relu', padding='same', kernel_initializer='random_uniform')(x)
     x = Conv2D(32, (3, 3), activation='relu', padding='same', kernel_initializer='random_uniform')(x)
     x = Conv2D(32, (3, 3), activation='relu', padding='same', kernel_initializer='random_uniform')(x)
@@ -360,7 +358,7 @@ if True:
     x = Flatten()(encoded)
     x = Dense(2048, input_dim = input_dim, activation='relu', kernel_initializer='random_uniform')(x)
     x = Dropout(0.5)(x)
-    x = Dense(2048, input_dim = 4096, activation='relu', kernel_initializer='random_uniform')(x)
+    x = Dense(2048, input_dim = 2048, activation='relu', kernel_initializer='random_uniform')(x)
     x = Dropout(0.5)(x)
     
     output1 = Dense(1, input_dim = 1024, activation = 'sigmoid', kernel_initializer='random_uniform')(x)
@@ -379,7 +377,7 @@ if True:
         y_train_parts.append(y_train[:,i].ravel())
         y_val_parts.append(y_val[:,i].ravel())
     
-    history = modelPredict.fit(x_train, y_train_parts, batch_size=64, nb_epoch=200,verbose=1, validation_data=(x_val, y_val_parts))
+    history = modelPredict.fit(x_train, y_train_parts, batch_size=64,shuffle=True, nb_epoch=200,verbose=1, validation_data=(x_val, y_val_parts))
     
     print(history.history.keys())
     # summarize history for loss
