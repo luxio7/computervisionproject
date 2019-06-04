@@ -6,6 +6,7 @@ Created on Mon Jun  3 11:33:44 2019
 """
 from keras.preprocessing.image import ImageDataGenerator
 from model import unet
+from keras.callbacks import ModelCheckpoint
 
 #BATCH_SIZE = 32
 #EPOCHS 
@@ -23,12 +24,12 @@ def train_model(model, x_train, y_train, val_data, model_name = "segmentation.h5
         model.load_weights(model_path)
         
     #create image augmentation data generator 
-    aug = ImageDataGenerator(rotation_range = 0, 
+    aug = ImageDataGenerator(rotation_range = 0.05, 
                              zoom_range = 0.05, 
                              width_shift_range = 0.05, 
                              height_shift_range = 0.05, 
                              horizontal_flip = True, 
-                             shear_range = 0.02,
+                             shear_range = 0.05,
                              fill_mode = 'nearest')
     model_checkpoint = ModelCheckpoint(model_path, monitor='loss',verbose=1, save_best_only=True)
 

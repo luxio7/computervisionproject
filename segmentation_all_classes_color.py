@@ -19,6 +19,7 @@ import cv2
 from train_with_Generator import *
 import datetime
 import matplotlib.pyplot as plt
+from util import save_history
 
 
 #%%
@@ -116,23 +117,24 @@ else:
 #%%
 model = unet()
 model.summary()
-history = train_model(model, x_train, y_train, (x_val, y_val), nb_epochs = 15)
+history = train_model(model, x_train, y_train, (x_val, y_val), nb_epochs = 1, create_new_model=True)
 
 save_history(history)
 
 #%%
+model.load_weights("models/segmentation.h5")
 def saveResult(save_path,npyfile,thresholded = True, threshold = 0.5):
     if thresholded:
         save_path = save_path + "/binary"
     for i,item in enumerate(npyfile):
-        res = item[:,:,0]
+        res = item[:,:,0].astype('uint8')
         if thresholded:    
             ret, res = cv2.threshold(res, threshold, 1, cv2.THRESH_BINARY)
         io.imsave(os.path.join(save_path,"%d_predict.png"%i),res)
 
 
 results = model.predict(x_val,1,verbose=1)
-saveResult("results",results)
+saveResult("results",results, False)
 
 #%%
 # summarize history for loss
@@ -143,6 +145,9 @@ plt.ylabel('loss')
 plt.xlabel('epoch')
 plt.legend(['train', 'test'], loc='upper left')
 plt.show()
+
+
+
 def showResult(index, thresholded=True, threshold = 0.5):
         fig=plt.figure(figsize = (10,10))
         fig.add_subplot(221)
@@ -159,15 +164,3 @@ def showResult(index, thresholded=True, threshold = 0.5):
         #io.imshow(y_val[index][:,:,0])
 
         #io.imshow(binary_img)
-
-
-sys.exit()
-
-
-
-def save_history(history, model_name="segmentation"):
-        tijd = datetime.datetime.now()
-        tijdstring = tijd.strftime("%H:%M:%S").replace(":", "_")
-        path = "models/history_"+model_name+tijdstring
-        with open(path, 'wb') as file_pi:
-            pickle.dump(history.history, file_pi)
